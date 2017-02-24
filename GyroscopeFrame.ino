@@ -1,9 +1,3 @@
-
-
-
-
-
-
 /*========================================================================================*
 *                                                                                         *
 *                                   Variables                                             *
@@ -78,9 +72,6 @@ void setup(){
   writeI2C(CTRL_REG4, 0x80);    // Set scale (500 deg/sec)
   
   delay(100);                   // Wait to synchronize 
-  
-  gripperY.write(initPosY);
-  gripperZ.write(initPosZ);
 }
 
 
@@ -97,10 +88,6 @@ void loop(){
   Serial.print(" Raw Y:"); Serial.print(y / 114);
   Serial.print(" Raw Z:"); Serial.println(z / 114);
   delay(100);                   // Short delay between reads
-  currentAngleY = gripperY.read();
-  currentAngleZ = gripperZ.read();
-  gripperY.write(currentAngleY - y);
-  gripperZ.write(currentAngleZ - z);
 }
 
 
@@ -155,44 +142,83 @@ void writeI2C (byte regAddr, byte val) {
 
 //==================================================================================\\
 
-void gyroIntegral(){   //Integral = Sigma(gyroscope values)*sampling period from 0 tot "t".
-  getGyroValues();
-  angleX = xIntegral/(samplePeriod*114);
-  angleY = yIntegral/(samplePeriod*114);
-  angleZ = zIntegral/(samplePeriod*114);
-  Serial.print("Angle Y: \n");
-  Serial.print(angleY);
-  Serial.print("Angle Z: \n");
-  Serial.print(angleZ);
+/* Jarzebski Stuff
+ // Calibrate gyroscope. The calibration must be at rest.
+  // If you don't want calibrate, comment this line.
+  gyroscope.calibrate();
+
+  // Set threshold sensivty. Default 3.
+  // If you don't want use threshold, comment this line or set 0.
+  gyroscope.setThreshold(3);
+  
+  calibrate(uint8_t samples)
+{
+    // Set calibrate
+    useCalibrate = true;
+
+    // Reset values
+    float sumX = 0;
+    float sumY = 0;
+    float sumZ = 0;
+    float sigmaX = 0;
+    float sigmaY = 0;
+    float sigmaZ = 0;
+
+    // Read n-samples
+    for (uint8_t i = 0; i < samples; ++i)
+    {
+	readRaw();
+	sumX += r.XAxis;
+	sumY += r.YAxis;
+	sumZ += r.ZAxis;
+
+	sigmaX += r.XAxis * r.XAxis;
+	sigmaY += r.YAxis * r.YAxis;
+	sigmaZ += r.ZAxis * r.ZAxis;
+	
+	delay(5);
+    }
+
+    // Calculate delta vectors
+    d.XAxis = sumX / samples;
+    d.YAxis = sumY / samples;
+    d.ZAxis = sumZ / samples;
+
+    // Calculate threshold vectors
+    thresholdX = sqrt((sigmaX / samples) - (d.XAxis * d.XAxis));
+    thresholdY = sqrt((sigmaY / samples) - (d.YAxis * d.YAxis));
+    thresholdZ = sqrt((sigmaZ / samples) - (d.ZAxis * d.ZAxis));
+
+    // If already set threshold, recalculate threshold vectors
+    if (actualThreshold > 0)
+    {
+	setThreshold(actualThreshold);
+    }
 }
 
-//==================================================================================\\
+setThreshold(uint8_t multiple)
+{
+    if (multiple > 0)
+    {
+	// If not calibrated, need calibrate
+	if (!useCalibrate)
+	{
+	    calibrate();
+	}
+	
+	// Calculate threshold vectors
+	t.XAxis = thresholdX * multiple;
+	t.YAxis = thresholdY * multiple;
+	t.ZAxis = thresholdZ * multiple;
+    } else
+    {
+	// No threshold
+	t.XAxis = 0;
+	t.YAxis = 0;
+	t.ZAxis = 0;
+    }
 
-void gyroMovements(){
-  gyroIntegral();
-  
-  currentAngleY -= angleY;
-  currentAngleZ -= angleZ;
-
-  while(abs(currentAngleY) > 360){
-    if(currentAngleY > 360){
-      currentAngleY -= 360; 
-    }
-    else{
-      currentAngleY += 360;
-    }
-  }
-
-  while(abs(currentAngleZ) > 360){
-    if(currentAngleZ > 360){
-      currentAngleZ -= 360; 
-    }
-    else{
-      currentAngleZ += 360;
-    }
-  }
-  
-  gripperY.write(currentAngleY);
-  gripperZ.write(currentAngleZ);
+    // Remember old threshold value
+    actualThreshold = multiple;
 }
 
