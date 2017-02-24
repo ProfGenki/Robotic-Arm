@@ -150,6 +150,7 @@ void initialize(){
    else{
     gripperServo2.write(90);
    }
+   buttonStateB = digitalRead(buttonBlue);
   }
   
   void toggleGyro(){
@@ -159,7 +160,13 @@ void initialize(){
    else{
     gyroState = 0;
    }
+   buttonStateG = digitalRead(buttonGreen);
   }
    
 void recall(){
- 
+ gripperServo.write(initPosGripper);
+ baseServo.write(initPosBase);
+ armServo.write(initPosArm);
+ rotateServo.write(initPosRotate);
+ buttonStateR = digitalRead(buttonRed);
+}
