@@ -104,7 +104,7 @@ void buttonCheck(){
  if(buttonStateB != digitalRead(buttonBlue)){
     toggleServo():
  if(buttonStateG != digitalRead(buttonGreen)){
-   gyroDisconect();
+   toggleGyro();
  if(buttonStateR != digitalRead(buttonRed)){
    recall();
  }
@@ -142,3 +142,24 @@ void initialize(){
   buttonStateJR = digitalRead(buttonJoyR);
   buttonStateJL = digitalRead(buttonJoyL);
 }
+  
+  void toggleServo(){
+   if(servoState == 0){
+    gripperServo2.write(180);
+   }
+   else{
+    gripperServo2.write(90);
+   }
+  }
+  
+  void toggleGyro(){
+   if(gyroState = 0){
+    gyroState = 1;
+   }
+   else{
+    gyroState = 0;
+   }
+  }
+   
+void recall(){
+ 
