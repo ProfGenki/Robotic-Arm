@@ -1,88 +1,144 @@
 #include <Servo.h>
-Servo testservo;
-Servo testservo2;
-Servo testservo3;
 
-int joyTest3 = 3;
-int joyVal3;
-int servoPos3;
+Servo rotateServo;
+Servo baseServo;
+Servo armServo;
+Servo gripperServo;
 
-int joyTest2 = 1;
-int joyVal2;
-int servoPos2;
+Servo gripperServo2;
 
-int joyTest =2;
-int joyVal;
-int servoPos;
+float servoPos;
 
+float velox = 1;
+
+int delaySpeed = 5;
+
+int joyRotate = 0;
+int rotateVal;
+int rotatePos;
+
+int joyBase = 1;
+int baseVal;
+int basePos;
+
+int joyArm = 2;
+int armVal;
+int armPos;
+
+int joyGripper = 3;
+int gripperVal;
+int gripperPos;
+
+int buttonBlue = 7;
+int buttonGreen = 6;
+int buttonRed = 5
+int buttonJoyR = 4;
+int buttonJoyL = 3;
+
+int buttonStateB;
+int buttonStateG;
+int buttonStateR;
+int buttonStateJR;
+int buttonStateJL;
+
+int statusLED = 2;
+ 
 void setup() {
- // pinMode(7,INPUT);
-  //inMode(6, INPUT);
-  testservo.attach(10);
-  delay(15);
-  testservo.write(90);
-  delay(15);
+ pinMode(buttonBlue, INPUT);
+ pinMode(buttonGreen, INPUT);
+ pinMode(buttonRed, INPUT);
+ pinMode(buttonJoyR, INPUT);
+ pinMode(buttonJoyL, INPUT);
+ 
+ pinMode(statusLED, OUTPUT);
   
-  testservo2.attach(9);
-  delay(15);
-  testservo2.write(180);
-  delay(15);
-
-  testservo3.attach(8);
-  delay(15);
-  testservo3.write(90);
-  delay(15);
-    
-Serial.begin(9600);
+ initialize();
 }
 
+
 void loop() {
- /* Serial.print("Joystick 0: ");
-  Serial.print(analogRead(0));
-  Serial.print(".  ");
-  delay(2000);
+ movement(velox, delaySpeed);
+ buttonCheck();
+}
 
-  Serial.print("Joystick 1: ");
-  Serial.print(analogRead(1));
-  Serial.print(".  ");
-  delay(2000);
 
-  Serial.print("Joystick 2: ");
-  Serial.print(analogRead(2));
-  Serial.print(".  ");
-  delay(750);
+void movement(velox, delaySpeed){
+ rotateVal = analogRead(joyRotate);
+  if(rotateVal > 800){
+    servoPos = rotateServo.read() + velox;
+    rotateServo.write(servoPos);}
+  if(rotateVal < 200){
+    servoPos = rotateServo.read() - velox;
+    rotateServo.write(servoPos);}
+delay(delaySpeed);
 
-  Serial.print("Joystick 3: ");
-  Serial.print(analogRead(3));
-  Serial.print(".  ");
-  delay(750);
-  */
+baseVal = analogRead(joyBase);
+  if(baseVal > 800){
+    servoPos = baseServo.read() - velox;
+    baseServo.write(servoPos);}
+  if(baseVal < 200){
+    servoPos = baseServo.read() + velox;
+    baseServo.write(servoPos);}
+delay(delaySpeed);
 
-joyVal = analogRead(joyTest);
-  if(joyVal > 800){
-    servoPos = testservo.read() + 1;
-    testservo.write(servoPos);}
-  if(joyVal < 200){
-    servoPos = testservo.read() - 1;
-    testservo.write(servoPos);}
-delay(5);
+armVal = analogRead(joyArm);
+  if(armVal > 700){
+    servoPos = armServo.read() + velox;
+    armServo.write(servoPos);}
+  if(armVal < 300){
+    servoPos = armServo.read() - velox;
+    armServo.write(servoPos);}
+delay(delaySpeed);
+ 
+ gripperVal = analogRead(joyGripper);
+  if(gripperVal > 700){
+    servoPos = gripperServo.read() + (velox/gripperFactor);
+    gripperServo.write(servoPos);}
+  if(gripperVal < 300){
+    servoPos = gripperServo.read() - (velox/gripperFactor);
+    gripperServo.write(servoPos);}
+ 
+}
 
-joyVal2 = analogRead(joyTest2);
-  if(joyVal2 > 800){
-    servoPos2 = testservo2.read() - 1;
-    testservo2.write(servoPos2);}
-  if(joyVal2 < 200){
-    servoPos2 = testservo2.read() + 1;
-    testservo2.write(servoPos2);}
-delay(5);
+void buttonCheck(){
+ if(buttonStateB != digitalRead(buttonBlue)){
+    toggleServo():
+ if(buttonStateG != digitalRead(buttonGreen)){
+   gyroDisconect();
+ if(buttonStateR != digitalRead(buttonRed)){
+   recall();
+ }
 
-joyVal3 = analogRead(joyTest3);
-  if(joyVal3 > 700){
-    servoPos3 = testservo3.read() + 1;
-    testservo3.write(servoPos3);}
-  if(joyVal3 < 300){
-    servoPos3 = testservo3.read() - 1;
-    testservo3.write(servoPos3);}
-delay(5);
 
+void initialize(){
+  rotateServo.attach(8);
+  delay(15);
+  rotateServo.write(90);
+  delay(15);
+  
+  baseServo.attach(9);
+  delay(15);
+  baseServo.write(180);
+  delay(15);
+
+  armServo.attach(10);
+  delay(15);
+  armServo.write(90);
+  delay(15);
+    
+  gripperServo.attach(11);
+  delay(15);
+  gripperServo.write(90);
+  delay(15);
+ 
+  initRotate = rotateServo.read();
+  initBase = baseServo.read();
+  initArm = armServo.read();
+  initGripper = gripperServo.read();
+  
+  buttonStateB = digitalRead(buttonBlue);
+  buttonStateG = digitalRead(buttonGreen);
+  buttonStateR = digitalRead(buttonRed);
+  buttonStateJR = digitalRead(buttonJoyR);
+  buttonStateJL = digitalRead(buttonJoyL);
 }
