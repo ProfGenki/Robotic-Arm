@@ -8,7 +8,7 @@
 
 #include <math.h> 
 #include <Servo.h>
-
+#include <Wire.h>
 
 //=========================================Angles=============================================================\\
 
@@ -232,7 +232,41 @@ void stabilize(){
  currentAngle -= gyro;
  gripperServo.write(currentAngle);
 }
-                             
+                 
+//=====Read Raw=====\\                              
+void readRaw()
+{
+    Wire.beginTransmission(L3G4200D_ADDRESS);
+    if(ARDUINO >= 100){
+	Wire.write(L3G4200D_REG_OUT_X_L | (1 << 7)); 
+    }else{
+	Wire.send(L3G4200D_REG_OUT_X_L | (1 << 7)); 
+    }
+    Wire.endTransmission();
+    Wire.requestFrom(L3G4200D_ADDRESS, 6);
+
+    while (Wire.available() < 6);
+
+    if(ARDUINO >= 100){
+	uint8_t xla = Wire.read();
+	uint8_t xha = Wire.read();
+	uint8_t yla = Wire.read();
+	uint8_t yha = Wire.read();
+	uint8_t zla = Wire.read();
+	uint8_t zha = Wire.read();
+    }else{
+	uint8_t xla = Wire.receive();
+	uint8_t xha = Wire.receive();
+	uint8_t yla = Wire.receive();
+	uint8_t yha = Wire.receive();
+	uint8_t zla = Wire.receive();
+	uint8_t zha = Wire.receive();
+    }
+    rawX = xha << 8 | xla;
+    rawY = yha << 8 | yla;
+    rawZ = zha << 8 | zla;
+}
+                 
 //==========================================Servo Functions========================================================\\
                  
 //=====Move=====\\                                              
