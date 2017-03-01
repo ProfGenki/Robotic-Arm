@@ -38,6 +38,7 @@ const int automateSpeed = "placeholder";
 
 const float sideA = "placeholder";
 const float sideB = "placeholder";
+const float heightG = "placeholder";
 
 float xList[] = {1};
 float yList[] = {1};
@@ -120,7 +121,7 @@ void flip(int o){
 }
 
 //=====Sort=====\\                  
-void sort(){
+void sortPos(){
   flip();
   for(i = p; i < p + 10; i ++){
     gyro = getGyroVals;
@@ -128,6 +129,9 @@ void sort(){
     theta = atan(xList[i]/(250 + yList[i]);
     alpha = asin(sideA*(sin(gyro))/sideB);
     gamma = asin(sideC*(sin(gyro))/sideB);
+                 
+    float alphaNeg = atan(heightG/sideC);
+    alpha -= alphaNeg;
    
     stabilize();       
     delay(15);             
@@ -150,7 +154,7 @@ void sort(){
 //=====Button Check=====\\                                   
 void buttonCheck(){
  if(prevButtonB != digitalRead(buttonBlue)){
-   sort();
+   sortPos();
    prevButtonB = digitalRead(buttonBlue);}
  if(prevButtonG != digitalRead(buttonGreen)){
    calibrate();
