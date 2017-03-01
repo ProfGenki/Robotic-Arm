@@ -220,17 +220,38 @@ void callibrate(){
  //
  status();
 } 
-                
-//=====getGyroVals=====\\                 
-float getGyroVals(){
-
-}
-                 
+                           
 //=====Stabilize=====\\ 
 void stabilize(){
- gyro = getGyroVals();
+ readNormal();
+ gyro = yNormal;
  currentAngle -= gyro;
  gripperServo.write(currentAngle);
+}
+		 
+//=====ReadNormal=====\\		 
+void readNormal()
+{
+    readRaw();
+
+    if (useCalibrate)
+    {
+	xNormal = (rawX - xDelta) * dpsPerDigit;
+	yNormal = (rawY - yDelta) * dpsPerDigit;
+	zNormal = (rawZ - zDelta) * dpsPerDigit;
+    } else
+    {
+	xNormal = xRaw * dpsPerDigit;
+	yNormal = yRaw * dpsPerDigit;
+	zNormal = zRaw * dpsPerDigit;
+    }
+
+    if (actualThreshold > 0)
+    {
+	if (abs(xNormal) < xThreshold){ xNormal = 0;}
+	if (abs(yNormal) < yThreshold){ yNormal = 0;}
+	if (abs(zNormal) < zThreshold){ zNormal = 0;}
+    }
 }
                  
 //=====Read Raw=====\\                              
