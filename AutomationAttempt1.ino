@@ -9,12 +9,15 @@
 #include <math.h> 
 #include <Servo.h>
 #include <Wire.h>
+#include <Arduino.h>
 
 //=========================================Angles=============================================================\\
 
 float gyro;    
+float theta;
 float alpha;
 float gamma;
+float thetaNeg = "placeholder";  //Where theta is perpendicular to the circle.
 
 float currentAngle; //Current angle of gyroscope. 
 
@@ -30,6 +33,8 @@ int prevButtonY;
 
 //=========================================Control============================================================\\
 
+#define L3G4200D_ADDRESS = 105;
+
 int p;
 
 const int velox = 1;
@@ -43,6 +48,31 @@ const float heightG = "placeholder";
 float xList[] = {1};
 float yList[] = {1};
 
+int actualThreshold = 3;
+
+float xRaw;
+float xNormal;
+float xDelta
+float xSigma;
+float xSum;
+float xThreshold;
+float xThresholdVector;
+
+float yRaw;
+float yNormal;
+float yDelta
+float ySigma;
+float ySum;
+float yThreshold;
+float yThresholdVector;
+
+float zRaw;
+float zNormal;
+float zDelta
+float zSigma;
+float zSum;
+float zThreshold;
+float zThresholdVector;
 //======================================Servo Objects========================================================\\
 
 Servo rotateServo;
@@ -50,12 +80,12 @@ Servo baseServo;
 Servo armServo;
 Servo gripperServo;
 
-int initPosR = "placeholder";
-int initPosB = "placeholder";
-int initPosA = "placeholder";
-int initPosG = "placeholder";
-int initPosO = "placeholder";
-int initPosS = "placeholder";
+float initPosR = "placeholder";
+float initPosB = "placeholder";
+float initPosA = "placeholder";
+float initPosG = "placeholder";
+float initPosO = "placeholder";
+float initPosS = "placeholder";
 
 /*===============================================================================================================*
 *                                                                                                                *
@@ -79,6 +109,7 @@ void setup() {
  sortServo.attach(13);
   
  initialize();
+	
 }
 
 /*===============================================================================================================*
@@ -103,9 +134,9 @@ void loop() {
 
 //=====Automate=====\\ 
 void automate();
-   sortServo.write(placeholderVal);
+   sortServo.write("placeholder");
    delay(automateSpeed);
-   sortServo.write(oppositePlaceholderVal);
+   sortServo.write("opposite placeholder");
    delay(automateSpeed);
 }
      
@@ -126,9 +157,9 @@ void sortPos(){
   for(i = p; i < p + 10; i ++){
     gyro = getGyroVals;
     sideC = sqrt(xList[i]*xList[i] + (250 - yList[i]*yList[i]);
-    theta = atan(xList[i]/(250 + yList[i]);
-    alpha = asin(sideA*(sin(gyro))/sideB);
-    gamma = asin(sideC*(sin(gyro))/sideB);
+    theta = atan(xList[i]/(250 + yList[i]));
+    alpha = asin((sideA*sin(gyro))/sideB);
+    gamma = asin((sideC*sin(gyro))/sideB);
                  
     float alphaNeg = atan(heightG/sideC);
     alpha -= alphaNeg;
@@ -206,7 +237,18 @@ void initialize(){
  prevButtonR = digitalRead(buttonRed);
  
  currentAngle = initPosG;
- 
+ 	
+ xDelta = 0;
+ yDelta = 0;
+ zDelta = 0;
+ useCalibrate = FALSE;
+
+    // Reset threshold values
+ xThreshold = 0;
+ yThreshold = 0;
+ zThreshold = 0;
+	
+	
  calibrate();
  
  stabilize();
@@ -215,39 +257,97 @@ void initialize(){
 //============================================Gyro Functions======================================================\\
                  
 //=====Callibrate=====\\                                  
-void callibrate(){
+void calibrate(){
  status();
- //
+ {
+    // Set calibrate
+    useCalibrate = TRUE;
+
+    // Reset values
+    float sumX = 0;
+    float sumY = 0;
+    float sumZ = 0;
+    float sigmaX = 0;
+    float sigmaY = 0;
+    float sigmaZ = 0;
+
+    // Read n-samples
+    for (int i = 0; i < samples; ++i){
+	readRaw();
+	    
+	xSum += xRaw;
+	ySum += yRaw;
+	zSum += zRaw;
+
+	xSigma += xRaw * xRaw;
+	ySigma += yRaw * yRaw;
+	zSigma += zRaw * zRaw;
+	
+	delay(5);
+    }
+
+    // Calculate delta vectors
+    xDelta = xSum / samples;
+    yDelta = ySum / samples;
+    zDelta = zSum / samples;
+
+    // Calculate threshold vectors
+    xThresholdVector = sqrt((xSigma / samples) - (xDelta * xDelta));
+    yThresholdVector = sqrt((ySigma / samples) - (yDelta * yDelta));
+    zThresholdVector = sqrt((zSigma / samples) - (zDelta * zDelta));
+
+    // If already set threshold, recalculate threshold vectors
+    if (actualThreshold > 0){setThreshold(actualThreshold);}
+}
  status();
 } 
-                           
-//=====Stabilize=====\\ 
-void stabilize(){
- readNormal();
- gyro = yNormal;
- currentAngle -= gyro;
- gripperServo.write(currentAngle);
+
+		 
+//=====Set Threshold=====\\		 
+void setThreshold(byte multiple)
+{
+    if (multiple > 0)
+    {
+	// If not calibrated, need calibrate
+	if (!useCalibrate)
+	{
+	    calibrate();
+	}
+	
+	// Calculate threshold vectors
+	xThreshold = thresholdX * multiple;
+	yThreshold = thresholdY * multiple;
+	zThreshold = thresholdZ * multiple;
+    } else
+    {
+	// No threshold
+	xThreshold = 0;
+	yThreshold = 0;
+	zThreshold = 0;
+    }
+
+    // Remember old threshold value
+    actualThreshold = multiple;
 }
+		 
 		 
 //=====ReadNormal=====\\		 
 void readNormal()
 {
     readRaw();
 
-    if (useCalibrate)
-    {
+    if (useCalibrate){
 	xNormal = (rawX - xDelta) * dpsPerDigit;
 	yNormal = (rawY - yDelta) * dpsPerDigit;
 	zNormal = (rawZ - zDelta) * dpsPerDigit;
-    } else
-    {
-	xNormal = xRaw * dpsPerDigit;
-	yNormal = yRaw * dpsPerDigit;
-	zNormal = zRaw * dpsPerDigit;
-    }
+    } 
+	else{
+	  xNormal = xRaw * dpsPerDigit;
+	  yNormal = yRaw * dpsPerDigit;
+	  zNormal = zRaw * dpsPerDigit;
+        }
 
-    if (actualThreshold > 0)
-    {
+    if (actualThreshold > 0){
 	if (abs(xNormal) < xThreshold){ xNormal = 0;}
 	if (abs(yNormal) < yThreshold){ yNormal = 0;}
 	if (abs(zNormal) < zThreshold){ zNormal = 0;}
@@ -255,8 +355,7 @@ void readNormal()
 }
                  
 //=====Read Raw=====\\                              
-void readRaw()
-{
+void readRaw(){
     Wire.beginTransmission(L3G4200D_ADDRESS);
     if(ARDUINO >= 100){
 	Wire.write(L3G4200D_REG_OUT_X_L | (1 << 7)); 
@@ -266,28 +365,37 @@ void readRaw()
     Wire.endTransmission();
     Wire.requestFrom(L3G4200D_ADDRESS, 6);
 
-    while (Wire.available() < 6);
-
+    while (Wire.available() < 6){
+    }
     if(ARDUINO >= 100){
-	uint8_t xla = Wire.read();
-	uint8_t xha = Wire.read();
-	uint8_t yla = Wire.read();
-	uint8_t yha = Wire.read();
-	uint8_t zla = Wire.read();
-	uint8_t zha = Wire.read();
+	byte xla = Wire.read();
+	byte xha = Wire.read();
+	byte yla = Wire.read();
+	byte yha = Wire.read();
+	byte zla = Wire.read();
+	byte zha = Wire.read();
     }else{
-	uint8_t xla = Wire.receive();
-	uint8_t xha = Wire.receive();
-	uint8_t yla = Wire.receive();
-	uint8_t yha = Wire.receive();
-	uint8_t zla = Wire.receive();
-	uint8_t zha = Wire.receive();
+	byte xla = Wire.receive();
+	byte xha = Wire.receive();
+	byte yla = Wire.receive();
+	byte yha = Wire.receive();
+	byte zla = Wire.receive();
+	byte zha = Wire.receive();
     }
     rawX = xha << 8 | xla;
     rawY = yha << 8 | yla;
     rawZ = zha << 8 | zla;
 }
-                 
+
+//=====Stabilize=====\\ 
+void stabilize(){
+ readNormal();
+ gyro = yNormal;
+ currentAngle -= gyro;
+ gripperServo.write(currentAngle);
+}
+			 
+		
 //==========================================Servo Functions========================================================\\
                  
 //=====Move=====\\                                              
