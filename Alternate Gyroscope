@@ -1,0 +1,65 @@
+//==============Arduino Stuff====================\\
+
+float xNull;  //To be observed through testing
+float yNull;  //To be observed through testing
+float zNull;  //To be observed through testing 
+
+float xInit;  //Based on differences when mounting servo
+float yInit;  //Based on differences when mounting servo
+float zInit;  //Based on differences when mounting servo
+
+void getGyroVals(){
+  if(Serial.available() > 0){
+    Serial.write("Requesting X");
+      while(!Serial.available()){ }
+      xRaw = Serial.read();}
+    
+  if(Serial.available() > 0){  
+    Serial.write("Requesting Y");
+      while(!Serial.available()){ }
+      yRaw = Serial.read();}
+      
+  if(Serial.available() > 0){    
+    Serial.write("Requesting Z");
+      while(!Serial.available()){ }
+      zRaw = Serial.read();}
+}
+
+void convertVals(){
+  getGyroVals();
+  
+  xConvert = (xRaw - xNull);
+  yConvert = (yRaw - yNull);
+  zConvert = (zRaw - zNull);
+  
+  xConvert += xInit;
+  yConvert += yInit;
+  zConvert += zInit;
+}
+
+void stabilize(){
+  convertVals();
+  yServo.write(yConvert);
+}
+
+//===============Python Stuff==============\\
+
+from sense_hat import SenseHat
+
+sense = SenseHat()
+
+while True:
+  orientation = sense.get_orietntation();
+   pitch = orientation['pitch']
+   roll = orientation['roll']
+   yaw = orientation['yaw']
+   
+   if(ser.readLine() == "Requesting X"):
+    ser.write(pitch)
+   if(ser.readLine() == "Requesting Y"):
+    ser.write(roll)
+   if(ser.readLine() == "Requesting Z"):
+    ser.write(yaw)
+
+
+
