@@ -60,10 +60,9 @@
 *================================================================================================================*/
 
 //=======================================Libraries===========================================================\\
-#include <math.h> 
+#include <Math.h> 
 #include <Servo.h>
 #include <Wire.h>
-#include <Arduino.h>
 
 //=========================================Angles=============================================================\\
 float gyro;    
@@ -74,24 +73,37 @@ float thetaNeg = 1.0;  //Where theta is perpendicular to the circle.
 
 float currentAngle; //Current angle of gyroscope. 
 
-//===========================================Buttons===========================================================\\
+//==========================================Controller===========================================================\\
 const int buttonBlue = 7;
 const int buttonGreen = 6;
 const int buttonRed = 5;
 
 int prevButtonB;
 int prevButtonG;
-int prevButtonY;
+int prevButtonR;
 
 int statusLED = 4;
+
+int joyRX = 0;
+int joyRY = 1;
+int joyLX = 2;
+int joyLY = 3;
 //=========================================Control============================================================\\
-#define L3G4200D_ADDRESS = 105;
+#define L3G4200D_ADDRESS           (0xD2 >> 1)
+#define L3G4200D_REG_OUT_X_L       (0x28)
+#define L3G4200D_REG_OUT_X_H       (0x29)
+#define L3G4200D_REG_OUT_Y_L       (0x2A)
+#define L3G4200D_REG_OUT_Y_H       (0x2B)
+#define L3G4200D_REG_OUT_Z_L       (0x2C)
+#define L3G4200D_REG_OUT_Z_H       (0x2D)
 
 int p;
 int orientation;
 
+bool useCalibrate;
+
 const int velox = 1;
-const int moveSpeed = 5;
+const int movementSpeed = 5;
 const int automateSpeed = 1;
 
 const float sideA = 1.0;
@@ -102,6 +114,8 @@ float xList[] = {1};
 float yList[] = {1};
 
 int actualThreshold = 3;
+int samples = 1000;
+float dpsPerDigit = 0.00875f;
 
 float xRaw;
 float xNormal;
@@ -147,20 +161,20 @@ float initPosS = 1.0;
 *                                                                                                                *
 *================================================================================================================*/
 
-void setup(int buttonBlue = 7) {
+void setup() {
  p = 0;
  pinMode(buttonBlue, INPUT);
  pinMode(buttonGreen, INPUT);
  pinMode(buttonRed, INPUT);
  pinMode(statusLED, OUTPUT);
  
- //rotateServo.attach(8);
+ rotateServo.attach(8);
  baseServo.attach(9);
  armServo.attach(10);
  gripperServo.attach(11);
  orientationServo.attach(12);
  sortServo.attach(13);
-// initialize();
+ initialize();
 }
 
 /*===============================================================================================================*
@@ -171,8 +185,8 @@ void setup(int buttonBlue = 7) {
 
 
 void loop() {
-  //buttonCheck();
-  //servoMovement();
+  buttonCheck();
+  servoMovement();
 }
 
 /*===============================================================================================================*
@@ -204,9 +218,10 @@ void flip(int f){
 //=====Sort=====\\                  
 void sortPos(){
   flip(orientation);
-  for(i = p; i < p + 10; i ++){
-    gyro = getGyroVals;
-    sideC = sqrt(xList[i]*xList[i] + (250 - yList[i]*yList[i]);
+  for(int i = p; i < p + 10; i ++){
+    readNormal();
+    gyro = yNormal;
+    float sideC = sqrt(xList[i]*xList[i] + (250 - yList[i]*yList[i]));
     theta = atan(xList[i]/(250 + yList[i]));
     alpha = asin((sideA*sin(gyro))/sideB);
     gamma = asin((sideC*sin(gyro))/sideB);
@@ -248,13 +263,13 @@ void buttonCheck(){
 //=====Recall=====\\ 
 void recall(){
  status();
- baseServo.write(initPos);
+ baseServo.write(initPosB);
  delay(100);
- armServo.write(initPos);
+ armServo.write(initPosA);
  delay(100);
- rotateServo.write(initPos);
+ rotateServo.write(initPosR);
  delay(100);
- gripperServo.write(initPos);
+ gripperServo.write(initPosG);
  delay(100);
  status();
 }
@@ -262,9 +277,9 @@ void recall(){
 //=====Status=====\\ 
 void status(){
  if(digitalRead(statusLED) == LOW){
-  statusLED.write(HIGH);}
+  digitalWrite(statusLED,HIGH);}
  else{
-  statusLED.write(LOW);}
+  digitalWrite(statusLED,LOW);}
 } 
                  
 //=====Initialize=====\\ 
@@ -282,7 +297,7 @@ void initialize(){
  delay(100);
  orientationServo.write(initPosO);
  delay(100);
- sortServo.write(InitPosS);
+ sortServo.write(initPosS);
  delay(100);
  
  prevButtonB = digitalRead(buttonBlue);
@@ -294,7 +309,7 @@ void initialize(){
  xDelta = 0;
  yDelta = 0;
  zDelta = 0;
- useCalibrate = FALSE;
+ useCalibrate = false;
 
     // Reset threshold values
  xThreshold = 0;
@@ -314,7 +329,7 @@ void calibrate(){
  status();
  {
     // Set calibrate
-    useCalibrate = TRUE;
+    useCalibrate = true;
 
     // Reset values
     float sumX = 0;
@@ -368,9 +383,9 @@ void setThreshold(byte multiple)
   }
   
   // Calculate threshold vectors
-  xThreshold = thresholdX * multiple;
-  yThreshold = thresholdY * multiple;
-  zThreshold = thresholdZ * multiple;
+  xThreshold = xThresholdVector * multiple;
+  yThreshold = yThresholdVector * multiple;
+  zThreshold = zThresholdVector * multiple;
     } else
     {
   // No threshold
@@ -390,9 +405,9 @@ void readNormal()
     readRaw();
 
     if (useCalibrate){
-  xNormal = (rawX - xDelta) * dpsPerDigit;
-  yNormal = (rawY - yDelta) * dpsPerDigit;
-  zNormal = (rawZ - zDelta) * dpsPerDigit;
+  xNormal = (xRaw - xDelta) * dpsPerDigit;
+  yNormal = (zRaw - yDelta) * dpsPerDigit;
+  zNormal = (yRaw - zDelta) * dpsPerDigit;
     } 
   else{
     xNormal = xRaw * dpsPerDigit;
@@ -410,34 +425,22 @@ void readNormal()
 //=====Read Raw=====\\                              
 void readRaw(){
     Wire.beginTransmission(L3G4200D_ADDRESS);
-    if(ARDUINO >= 100){
-  Wire.write(L3G4200D_REG_OUT_X_L | (1 << 7)); 
-    }else{
-  Wire.send(L3G4200D_REG_OUT_X_L | (1 << 7)); 
-    }
+    Wire.write(L3G4200D_REG_OUT_X_L | (1 << 7)); 
     Wire.endTransmission();
     Wire.requestFrom(L3G4200D_ADDRESS, 6);
-
     while (Wire.available() < 6){
     }
-    if(ARDUINO >= 100){
+ 
   byte xla = Wire.read();
   byte xha = Wire.read();
   byte yla = Wire.read();
   byte yha = Wire.read();
   byte zla = Wire.read();
   byte zha = Wire.read();
-    }else{
-  byte xla = Wire.receive();
-  byte xha = Wire.receive();
-  byte yla = Wire.receive();
-  byte yha = Wire.receive();
-  byte zla = Wire.receive();
-  byte zha = Wire.receive();
-    }
-    rawX = xha << 8 | xla;
-    rawY = yha << 8 | yla;
-    rawZ = zha << 8 | zla;
+ 
+    xRaw = xha << 8 | xla;
+    yRaw = yha << 8 | yla;
+    zRaw = zha << 8 | zla;
 }
 
 //=====Stabilize=====\\ 
@@ -469,16 +472,15 @@ void servoMovement(){
  int currentAngleA = armServo.read();
  
  if(rotateVal > 800){
-   move(rotateServo, velox);}
+   move(rotateServo, velox, currentAngleR);}
  if(rotateVal < 200){
-   move(rotateServo, -velox);}
+   move(rotateServo, -velox, currentAngleR);}
  if(baseVal > 800){
-   move(baseServo, velox);}
+   move(baseServo, velox, currentAngleB);}
  if(baseVal < 200){
-   move(baseServo, -velox);}
+   move(baseServo, -velox, currentAngleB);}
  if(armVal > 800){
-   move(armServo, velox);}
+   move(armServo, velox, currentAngleA);}
  if(armVal < 200){
-   move(armServo, -velox);}
+   move(armServo, -velox, currentAngleA);}
 }
-
