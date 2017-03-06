@@ -1,65 +1,154 @@
-//==============Arduino Stuff====================\\
+#include <Servo.h>
 
-float xNull;  //To be observed through testing
-float yNull;  //To be observed through testing
-float zNull;  //To be observed through testing 
-
-float xInit;  //Based on differences when mounting servo
-float yInit;  //Based on differences when mounting servo
-float zInit;  //Based on differences when mounting servo
-
-void getGyroVals(){
-  if(Serial.available() > 0){
-    Serial.write("Requesting X");
-      while(!Serial.available()){ }
-      xRaw = Serial.read();}
-    
-  if(Serial.available() > 0){  
-    Serial.write("Requesting Y");
-      while(!Serial.available()){ }
-      yRaw = Serial.read();}
-      
-  if(Serial.available() > 0){    
-    Serial.write("Requesting Z");
-      while(!Serial.available()){ }
-      zRaw = Serial.read();}
+void setup() {
+  // put your setup code here, to run once:
+Serial.begin(9600);
 }
 
-void convertVals(){
-  getGyroVals();
-  
-  xConvert = (xRaw - xNull);
-  yConvert = (yRaw - yNull);
-  zConvert = (zRaw - zNull);
-  
-  xConvert += xInit;
-  yConvert += yInit;
-  zConvert += zInit;
+void loop() {
+  getMovement();
+  buttonCheck();
+}
+
+void getGyroVals(){
+   if(Serial.available()){
+     Serial.write("Requesting X");
+     while(!Serial.available()){ }
+     xRaw = Serial.read();
+   }
+
+   if(Serial.available()){
+     Serial.write("Requesting Y");
+     while(!Serial.available()){ }
+     yRaw = Serial.read();
+   }
+
+   if(Serial.available()){
+    Serial.write("Requesting Z");
+    while(!Serial.available()){ }
+    zRaw = Serial.read();
+   }
 }
 
 void stabilize(){
-  convertVals();
-  yServo.write(yConvert);
+   getGyroVals();
+
+   xDelta = xRaw - xNull;
+   yDelta = yRaw - yNull;
+   zDelta = zRaw - zNull;
+
+   if(abs(xDelta) > xThresh){
+     xCurrent += xDelta;
+     xServo.write(xCurrent);}
+   if(abs(yDelta) > yThresh){
+     yCurrent += yDelta;
+     yServo.write(yCurrent);}
+   if(abs(zDelta) > zThresh){
+     zCurrent += zDelta;
+     zServo.write(zCurrent);}
 }
 
-//===============Python Stuff==============\\
+void flip(){
+  statusCheck();
+  if(pos == 0){
+    pos = 1;
+    xNull -= 180;
+    yNull -= 180;
+    zNull -= 180;
+    orientationServo.write(180);}
+  else{
+    pos = 0;
+    xNull += 180;
+    yNull += 180;
+    zNull += 180;
+    orientationServo.write(0);}
+}
 
-from sense_hat import SenseHat
+void statusCheck(){
+  if(digitalRead(statusLED) == LOW){
+    digitalWrite(statusLED, HIGH);}
+  else{
+    digitalWrite(statusLED, LOW);}
+}
 
-sense = SenseHat()
+void getMovement(){
+   if(analogRead(joyRX) > 800){
+      movement(rotateServo, magnus);}
+   if(analogRead(joyRX) < 200){
+      movement(rotateServo, -magnus);}
+   if(analogRead(joyRY > 800){
+      movement(baseServo, magnus);}
+   if(analogRead(joyRY) < 200){
+      movement(baseServo, -magnus);}
+   if(analogRead(joyLY) > 800){
+      movement(armServo, magnus);}
+   if(analogRead(joyLY) < 200){
+      movement(armServo, -magnus);}
+}
 
-while True:
-  orientation = sense.get_orietntation();
-   pitch = orientation['pitch']
-   roll = orientation['roll']
-   yaw = orientation['yaw']
-   
-   if(ser.readLine() == "Requesting X"):
-    ser.write(pitch)
-   if(ser.readLine() == "Requesting Y"):
-    ser.write(roll)
-   if(ser.readLine() == "Requesting Z"):
-    ser.write(yaw)
+void movement(Servo servo, int magnus){
+   servo.write(magnus);
+   delay(velox);
+   stabilize();
+}
 
+void buttonCheck(){
+  if(digitalRead(gBtn) != gPrev){
+    gPrev = digitalRead(gBtn);
+    automate();}
+  if(digitalRead(bBtn) != bPrev){
+    bPrev = digitalRead(bBtn);
+    calibrate();}
+  if(digitalRead(rBtn) != rPrev){
+    rPrev = digitalRead(rBtn);
+    recall();}
+}
 
+void automate(){
+  flip();
+  for(int i = p; i < 10 + p; i++){
+    float alpha = getSide(a);
+    float beta = getSide(b);
+    float gamma = getSide(g);
+    float theta = getSide(t);
 
+    movement(baseServo, 160);
+    delay(autoScale);
+    movement(armServo, alpha);
+    delay(autoScale);
+    movement(baseServo, beta);
+    delay(autoScale);
+    movement(rotateServo, theta);
+    delay(autoScale);
+    stabilize(); 
+  }
+  flip();
+}
+
+float getSide(char angle,int j){
+  getGyroVals();
+
+  xCoord = xList[j];
+  yCoord = yList[j];
+  
+  sideC = sqrt(xCoord*xCoord + (250 - yCoord*yCoord));
+  angleG = yNormal;
+  angleT = atan(xCoord/(250+yCoord));
+  angleA = asin((sideA*sin(angleG))/sideB);
+  angleB = asin((sideC*sin(angleG))/sideB);
+  
+  
+  switch(angle)
+  case "a":
+    return angleA;
+    break;
+  case "b":
+    return angleB;
+    break;
+  case "g":
+    return angleG;
+    break;
+  case "t":
+    return angleT;
+    break;  
+  }
