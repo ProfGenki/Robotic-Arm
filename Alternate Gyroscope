@@ -1,7 +1,21 @@
 #include <Servo.h>
 
+
+
 void setup() {
-  // put your setup code here, to run once:
+  p = 0;
+  
+  pinMode(bBtn, INPUT);
+  pinMode(gBtn, INPUT);
+  pinMode(rBtn, INPUT);
+  pinMode(statusLED, OUTPUT);
+  
+  rotateServo.attach(8);
+  baseServo.attach(9);
+  armServo.attach(10);
+  yServo.attach(11);
+  xServo.attach(12);
+
 Serial.begin(9600);
 }
 
@@ -10,44 +24,44 @@ void loop() {
   buttonCheck();
 }
 
-void getGyroVals(){
-   if(Serial.available()){
-     Serial.write("Requesting X");
-     while(!Serial.available()){ }
-     xRaw = Serial.read();
-   }
+//=====================Control====================\\
 
-   if(Serial.available()){
-     Serial.write("Requesting Y");
-     while(!Serial.available()){ }
-     yRaw = Serial.read();
-   }
+//=====Automate=====\\
+void automate(){
+  flip();
+  for(int i = p; i < 10 + p; i++){
+    float alpha = getAngle(a);
+    float beta = getAngle(b);
+    float gamma = getAngle(g);
+    float theta = getAngle(t);
 
-   if(Serial.available()){
-    Serial.write("Requesting Z");
-    while(!Serial.available()){ }
-    zRaw = Serial.read();
-   }
+    movement(baseServo, 160);
+    delay(autoScale);
+    movement(armServo, alpha);
+    delay(autoScale);
+    movement(baseServo, beta);
+    delay(autoScale);
+    movement(rotateServo, theta);
+    delay(autoScale);
+    stabilize(); 
+  }
+  flip();
 }
 
-void stabilize(){
-   getGyroVals();
-
-   xDelta = xRaw - xNull;
-   yDelta = yRaw - yNull;
-   zDelta = zRaw - zNull;
-
-   if(abs(xDelta) > xThresh){
-     xCurrent += xDelta;
-     xServo.write(xCurrent);}
-   if(abs(yDelta) > yThresh){
-     yCurrent += yDelta;
-     yServo.write(yCurrent);}
-   if(abs(zDelta) > zThresh){
-     zCurrent += zDelta;
-     zServo.write(zCurrent);}
+//=====ButtonCheck=====\\
+void buttonCheck(){
+  if(digitalRead(gBtn) != gPrev){
+    gPrev = digitalRead(gBtn);
+    automate();}
+  if(digitalRead(bBtn) != bPrev){
+    bPrev = digitalRead(bBtn);
+    calibrate();}
+  if(digitalRead(rBtn) != rPrev){
+    rPrev = digitalRead(rBtn);
+    recall();}
 }
 
+//=====Flip=====\\
 void flip(){
   statusCheck();
   if(pos == 0){
@@ -64,75 +78,15 @@ void flip(){
     orientationServo.write(0);}
 }
 
-void statusCheck(){
-  if(digitalRead(statusLED) == LOW){
-    digitalWrite(statusLED, HIGH);}
-  else{
-    digitalWrite(statusLED, LOW);}
-}
-
-void getMovement(){
-   if(analogRead(joyRX) > 800){
-      movement(rotateServo, magnus);}
-   if(analogRead(joyRX) < 200){
-      movement(rotateServo, -magnus);}
-   if(analogRead(joyRY > 800){
-      movement(baseServo, magnus);}
-   if(analogRead(joyRY) < 200){
-      movement(baseServo, -magnus);}
-   if(analogRead(joyLY) > 800){
-      movement(armServo, magnus);}
-   if(analogRead(joyLY) < 200){
-      movement(armServo, -magnus);}
-}
-
-void movement(Servo servo, int magnus){
-   servo.write(magnus);
-   delay(velox);
-   stabilize();
-}
-
-void buttonCheck(){
-  if(digitalRead(gBtn) != gPrev){
-    gPrev = digitalRead(gBtn);
-    automate();}
-  if(digitalRead(bBtn) != bPrev){
-    bPrev = digitalRead(bBtn);
-    calibrate();}
-  if(digitalRead(rBtn) != rPrev){
-    rPrev = digitalRead(rBtn);
-    recall();}
-}
-
-void automate(){
-  flip();
-  for(int i = p; i < 10 + p; i++){
-    float alpha = getSide(a);
-    float beta = getSide(b);
-    float gamma = getSide(g);
-    float theta = getSide(t);
-
-    movement(baseServo, 160);
-    delay(autoScale);
-    movement(armServo, alpha);
-    delay(autoScale);
-    movement(baseServo, beta);
-    delay(autoScale);
-    movement(rotateServo, theta);
-    delay(autoScale);
-    stabilize(); 
-  }
-  flip();
-}
-
-float getSide(char angle,int j){
-  getGyroVals();
+//=====GetAngle=====\\
+float getAngle(char angle,int j){
+  normalize();
 
   xCoord = xList[j];
   yCoord = yList[j];
   
   sideC = sqrt(xCoord*xCoord + (250 - yCoord*yCoord));
-  angleG = yNormal;
+  angleG = yDelta;
   angleT = atan(xCoord/(250+yCoord));
   angleA = asin((sideA*sin(angleG))/sideB);
   angleB = asin((sideC*sin(angleG))/sideB);
@@ -152,3 +106,93 @@ float getSide(char angle,int j){
     return angleT;
     break;  
   }
+
+//======StatusCheck======\\
+void statusCheck(){
+  if(digitalRead(statusLED) == LOW){
+    digitalWrite(statusLED, HIGH);}
+  else{
+    digitalWrite(statusLED, LOW);}
+}
+
+//====================Gyroscope====================\\
+
+//=====GetGyroVals=====\\
+float getGyroVals(char axis){
+  if(axis == "x" || axis == "pitch"){
+    if(Serial.available()){
+      Serial.write("Requesting X");
+      while(!Serial.available()){ }
+        xVal = Serial.read();
+        return xVal;}
+    }
+
+  if(axis == "y" || axis == "roll"){
+    if(Serial.available()){
+      Serial.write("Requesting Y");
+      while(!Serial.available()){ }
+        yVal = Serial.read();
+        return yVal;}
+   }
+
+  if(axis == "z" || axis == "yaw"){
+    if(Serial.available()){
+      Serial.write("Requesting Z");
+      while(!Serial.available()){ }
+        zVal = Serial.read();
+        return zVal;}
+   }
+}
+
+//=====Normalize=====\\
+void normalize(){
+   xRaw = getGyroVals(x);
+   yRaw = getGyroVals(y);
+   zRaw = getGyroVals(z);
+
+   xDelta = xRaw - xNull;
+   yDelta = yRaw - yNull;
+   zDelta = zRaw - zNull;
+}
+
+//=====Stabilize=====\\
+void stabilize(){
+  normalize();
+
+  if(abs(xDelta) > xThresh){
+     xCurrent += xDelta;
+     xServo.write(xCurrent);}
+   if(abs(yDelta) > yThresh){
+     yCurrent += yDelta;
+     yServo.write(yCurrent);}
+   if(abs(zDelta) > zThresh){
+     zCurrent += zDelta;
+     zServo.write(zCurrent);}
+}
+
+//======================Servo Movement====================\\
+
+//=====getMovement=====\\
+void getMovement(){
+   if(analogRead(joyRX) > 800){
+      movement(rotateServo, magnus);}
+   if(analogRead(joyRX) < 200){
+      movement(rotateServo, -magnus);}
+   if(analogRead(joyRY > 800){
+      movement(baseServo, magnus);}
+   if(analogRead(joyRY) < 200){
+      movement(baseServo, -magnus);}
+   if(analogRead(joyLY) > 800){
+      movement(armServo, magnus);}
+   if(analogRead(joyLY) < 200){
+      movement(armServo, -magnus);}
+}
+
+//=====Movement=====\\
+void movement(Servo servo, int magnus){
+   servo.write(magnus);
+   delay(velox);
+   stabilize();
+}
+
+
