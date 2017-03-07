@@ -26,11 +26,12 @@ float sideA = "placeholder";
 int bPrev;
 int gPrev;
 int rPrev;
-int autoscale = "placeholder"; //Timing for automation
+int autoscale = 150; //Timing for automation
 int pos;
 float yNull = "placeholder";
 float yDelta;
-int 
+float yCurrent; 
+int yThesh = 2;   //Change needs to be greater than 2. 
 
 //====================Setup====================\\
 void setup() {
@@ -48,6 +49,9 @@ void setup() {
   yServo.attach(11);
 
 Serial.begin(9600);
+delay(150);
+
+initPos();
 }
 
 //====================Main Loop====================\\
@@ -61,7 +65,7 @@ void loop() {
 //=====Automate=====\\
 void automate(){
   flip();
-  for(int i = p; i < 10 + p; i++){
+  for(int i = p; i < p + 10; i++){
     float alpha = getAngle(a);
     float beta = getAngle(b);
     float gamma = getAngle(g);
@@ -78,6 +82,7 @@ void automate(){
     stabilize(); 
   }
   flip();
+  p += 10;
 }
 
 //=====ButtonCheck=====\\
@@ -114,10 +119,10 @@ float getAngle(char angle, int j){
   float yCoord = yList[j];
   
   sideC = sqrt(xCoord*xCoord + (250 - yCoord*yCoord));
-  angleG = yDelta;
-  angleT = atan(xCoord/(250+yCoord));
-  angleA = asin((sideA*sin(angleG))/sideB);
-  angleB = asin((sideC*sin(angleG))/sideB);
+  float angleG = 90 - abs(yDelta);
+  float angleT = atan(xCoord/(250+yCoord));
+  float angleA = asin((sideA*sin(angleG))/sideB);
+  float angleB = asin((sideC*sin(angleG))/sideB);
 
   switch(angle)
   case "a":
@@ -185,9 +190,9 @@ void normalize(){
 //=====Stabilize=====\\
 void stabilize(){
   normalize();
+  yCurrent += yDelta 
   
-  if(abs(yDelta) > yThresh){
-    yCurrent += yDelta;
+  if((yCurrent <= yNull - yThresh) || yCurrent >= yNull + yThresh){
     yServo.write(yCurrent);}
 }
 
