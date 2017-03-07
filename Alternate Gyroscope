@@ -71,14 +71,10 @@ void automate(){
     float gamma = getAngle(g);
     float theta = getAngle(t);
 
-    movement(baseServo, 160);
-    delay(autoScale);
-    movement(armServo, alpha);
-    delay(autoScale);
-    movement(baseServo, beta);
-    delay(autoScale);
-    movement(rotateServo, theta);
-    delay(autoScale);
+    movement(baseServo, 160, autoscale);
+    movement(armServo, alpha, autoscale);
+    movement(baseServo, beta, autoscale);
+    movement(rotateServo, theta, autoscale);
     stabilize(); 
   }
   flip();
@@ -193,7 +189,7 @@ void stabilize(){
   yCurrent += yDelta 
   
   if((yCurrent <= yNull - yThresh) || yCurrent >= yNull + yThresh){
-    yServo.write(yCurrent);}
+    movement(yServo, yCurrent, magnus;}
 }
 
 //======================Servo Movement====================\\
@@ -215,9 +211,9 @@ void getMovement(){
 }
 
 //=====Movement=====\\
-void movement(Servo servo, float m){
+void movement(Servo servo, float m, v){
    servo.write(m);
-   delay(velox);
+   delay(v);
    stabilize();
 }
 
