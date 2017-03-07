@@ -1,8 +1,40 @@
+//=====Libraries=====\\
 #include <Servo.h>
+#include <math.h>
 
+//=====Servo Objects=====\\
+Servo rotateServo;
+Servo baseServo;
+Servo armServo;
+Servo yServo;
 
+//=====Controller Components=====\\
+int bBtn = 7;
+int gBtn = 6;
+int rBtn = 5;
+int statusLED = 4;
+int joyRX = 0;
+int joyRY = 1;
+int joyLY = 2;
 
+//=====Control Variables=====\\
+float magnus = 1.0; //Degrees
+int velox = 4;      //Milliseconds
+int p;              //Pennies Sorted
+float sideB = "placeholder";
+float sideA = "placeholder";
+int bPrev;
+int gPrev;
+int rPrev;
+int autoscale = "placeholder"; //Timing for automation
+int pos;
+float yNull = "placeholder";
+float yDelta;
+int 
+
+//====================Setup====================\\
 void setup() {
+  pos = 0;
   p = 0;
   
   pinMode(bBtn, INPUT);
@@ -14,11 +46,11 @@ void setup() {
   baseServo.attach(9);
   armServo.attach(10);
   yServo.attach(11);
-  xServo.attach(12);
 
 Serial.begin(9600);
 }
 
+//====================Main Loop====================\\
 void loop() {
   getMovement();
   buttonCheck();
@@ -66,32 +98,27 @@ void flip(){
   statusCheck();
   if(pos == 0){
     pos = 1;
-    xNull -= 180;
     yNull -= 180;
-    zNull -= 180;
     orientationServo.write(180);}
   else{
     pos = 0;
-    xNull += 180;
     yNull += 180;
-    zNull += 180;
     orientationServo.write(0);}
 }
 
 //=====GetAngle=====\\
-float getAngle(char angle,int j){
+float getAngle(char angle, int j){
   normalize();
 
-  xCoord = xList[j];
-  yCoord = yList[j];
+  float xCoord = xList[j];
+  float yCoord = yList[j];
   
   sideC = sqrt(xCoord*xCoord + (250 - yCoord*yCoord));
   angleG = yDelta;
   angleT = atan(xCoord/(250+yCoord));
   angleA = asin((sideA*sin(angleG))/sideB);
   angleB = asin((sideC*sin(angleG))/sideB);
-  
-  
+
   switch(angle)
   case "a":
     return angleA;
@@ -123,7 +150,7 @@ float getGyroVals(char axis){
     if(Serial.available()){
       Serial.write("Requesting X");
       while(!Serial.available()){ }
-        xVal = Serial.read();
+        float xVal = Serial.read();
         return xVal;}
     }
 
@@ -131,7 +158,7 @@ float getGyroVals(char axis){
     if(Serial.available()){
       Serial.write("Requesting Y");
       while(!Serial.available()){ }
-        yVal = Serial.read();
+        float yVal = Serial.read();
         return yVal;}
    }
 
@@ -139,16 +166,16 @@ float getGyroVals(char axis){
     if(Serial.available()){
       Serial.write("Requesting Z");
       while(!Serial.available()){ }
-        zVal = Serial.read();
+        float zVal = Serial.read();
         return zVal;}
    }
 }
 
 //=====Normalize=====\\
 void normalize(){
-   xRaw = getGyroVals(x);
-   yRaw = getGyroVals(y);
-   zRaw = getGyroVals(z);
+   float xRaw = getGyroVals(x);
+   float yRaw = getGyroVals(y);
+   float zRaw = getGyroVals(z);
 
    xDelta = xRaw - xNull;
    yDelta = yRaw - yNull;
@@ -158,16 +185,10 @@ void normalize(){
 //=====Stabilize=====\\
 void stabilize(){
   normalize();
-
-  if(abs(xDelta) > xThresh){
-     xCurrent += xDelta;
-     xServo.write(xCurrent);}
-   if(abs(yDelta) > yThresh){
-     yCurrent += yDelta;
-     yServo.write(yCurrent);}
-   if(abs(zDelta) > zThresh){
-     zCurrent += zDelta;
-     zServo.write(zCurrent);}
+  
+  if(abs(yDelta) > yThresh){
+    yCurrent += yDelta;
+    yServo.write(yCurrent);}
 }
 
 //======================Servo Movement====================\\
@@ -189,8 +210,8 @@ void getMovement(){
 }
 
 //=====Movement=====\\
-void movement(Servo servo, int magnus){
-   servo.write(magnus);
+void movement(Servo servo, float m){
+   servo.write(m);
    delay(velox);
    stabilize();
 }
