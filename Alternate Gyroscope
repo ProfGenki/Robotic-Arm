@@ -135,6 +135,25 @@ float getAngle(char angle, int j){
     break;  
   }
 
+void initialize(int numAngles, char angle1, char angle2, char angle3){
+  Serial.write("Initialize Pi");
+  while(!Serial.Available()){ }
+  Serial.write(numAngles);
+  
+    if(numAngles >= 1){
+       while(!Serial.available()){ }
+       Serial.write(angle1);}
+    if(numAngles >= 2){
+       while(!Serial.available()){ }
+       Serial.write(angle2);}
+     if(numAngles >= 3){
+       while(!Serial.available()){ }
+       Serial.write(angle3);}
+}
+
+      
+      
+      
 //======StatusCheck======\\
 void statusCheck(){
   if(digitalRead(statusLED) == LOW){
