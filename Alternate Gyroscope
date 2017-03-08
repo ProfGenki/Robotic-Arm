@@ -51,6 +51,8 @@ void setup() {
 Serial.begin(9600);
 delay(150);
 
+initialize(1, y, x, z);  //The important parameter is the first. The parameters denote the number of axes used as well as the axes used.  
+
 initPos();
 }
 
@@ -134,7 +136,7 @@ float getAngle(char angle, int j){
     return angleT;
     break;  
   }
-
+//=====Initialize=====\\\
 void initialize(int numAngles, char angle1, char angle2, char angle3){
   Serial.write("Initialize Pi");
   while(!Serial.Available()){ }
@@ -149,6 +151,12 @@ void initialize(int numAngles, char angle1, char angle2, char angle3){
      if(numAngles >= 3){
        while(!Serial.available()){ }
        Serial.write(angle3);}
+
+  recall();
+  
+  movement(yServo, initY, initDelay);
+  
+  stabilize();
 }
 
       
@@ -204,13 +212,14 @@ void normalize(){
 
 //=====Stabilize=====\\
 void stabilize(){
-  normalize();
-  yCurrent += yDelta 
+  if(recallStatus == 0){
+    normalize();
+    yCurrent += yDelta 
   
-  if((yCurrent <= yNull - yThresh) || yCurrent >= yNull + yThresh){
+    if((yCurrent <= yNull - yThresh) || yCurrent >= yNull + yThresh){
     movement(yServo, yCurrent, magnus;}
+  }
 }
-
 //======================Servo Movement====================\\
 
 //=====getMovement=====\\
@@ -236,4 +245,14 @@ void movement(Servo servo, float m, v){
    stabilize();
 }
 
+//=====Recall=====\\
+void recall(){
+  movement(baseServo, initB, initDelay);
+  movement(armServo, initA, initDelay);
+  movement(rotateServo, initR, initDelay);
+  movement(yServo, yStored, initDelay);
+  
+  if(recallStatus = 0){ recallStatus = 1}
+  else{ recallStatus = 0}
+  }
 
