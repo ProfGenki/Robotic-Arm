@@ -1,0 +1,99 @@
+//=============== Variables List ===============\\
+
+#include <Servo.h>
+
+Servo rotate;            //Rotates robotic arm horizontally
+Servo base;              //Lifts base motor
+Servo arm;               //Lifts highest motor 
+Servo gripper;           //Closes to grab pennies
+Servo orientationYaw;   //Orients gripper device in Yaw direction
+Servo orientationPitch;  //Orients gripper device in Pitch direction
+
+int joyRX = 0;           //Analog Pin 0 pairs with the X axis on Right joystick
+int joyRY = 1;           //Analog Pin 1 pairs with the Y axis on Right joystick
+int joyLY = 2;           //Analog Pin 2 pairs with the Y axis on Left Joystick
+int joyLX = 3;           //Analog Pin 3 pairs with the Y axis on Left Joystick
+
+int joyRB = 6;
+int joyLB = 5;
+
+int statusLED = 4;
+
+float sideA;
+float sideB;
+
+//=============== Setup Loop ===============\\
+
+void setup(){
+  pinMode(joyRB, INPUT);
+  pinMode(joyLB, INPUT);
+  pinMode(statusLED, OUPUT);
+  
+  rotate.attach(7);
+  base.attach(8);
+  arm.attach(9);
+  gripper.attach(10);
+  orientationYaw.attach(11);
+  orientationRoll.attach(12);
+  
+  initialize();
+}
+
+//=============== Main Loop ===============\\
+
+void loop(){
+  movement(rotate, analogRead(joyRX), pause, degree);
+  movement(base, analogRead(joyRX), pause, degree);
+  movement(arm, analogRead(joyRX), pause, degree);
+  stabilize();
+  buttonCheck();
+}
+
+//=============== Functions List ===============\\
+
+void movement(Servo servo, int val, int velox, magnus){    //Velox refers to the delay between movement.  Magnus refers to the degrees
+  float currentAngle = servo.read();
+  if(val == 5000){   //Allows automation without referencing currentAngle. 
+    servo.write(magnus);}
+  if(val > 800){
+    currentAngle += magnus;
+    servo.write(currentAngle);}
+  if(val < 200){
+    currentAngle -= mangus;
+    servo.write(currentAngle);}
+  delay(velox);
+}
+  
+void stabilize(){   //Needs testing based on servo orientation and gyro orientation
+ float currentYaw = orientationYaw.read();
+ float degreeVal = 90.0 - getYaw(); 
+  if(degreeVal > 0){
+    movement(orientationYaw, 0, pause, degreeVal}
+  if(degreeVal < 0){
+    movement(orientationYaw, 1000, pause, degreeVal);}
+}
+  
+float getYaw(){
+  float yaw = Serial.read();
+  return yaw;
+}
+  
+void buttonCheck(){
+  if(digitalRead(buttonRB == LOW){
+    initialize();}
+    
+  if(digitalRead(buttonLB == LOW){
+    automate();}
+}
+  
+void automate(){
+  toggleLED();
+  toggleGripper();
+  for(int i = p; i < p + 10; i++){
+    float alpha = doMath("alpha");
+    float beta = doMath("beta");
+    float theta = doMath("theta");
+    float sideC = doMath("sideC);
+    
+    
+    
