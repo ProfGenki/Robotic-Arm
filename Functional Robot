@@ -55,10 +55,10 @@ void movement(Servo servo, int val, int velox, magnus){    //Velox refers to the
   float currentAngle = servo.read();
   if(val == 5000){   //Allows automation without referencing currentAngle. 
     servo.write(magnus);}
-  if(val > 800){
+  else if(val > 800){
     currentAngle += magnus;
     servo.write(currentAngle);}
-  if(val < 200){
+  else if(val < 200){
     currentAngle -= mangus;
     servo.write(currentAngle);}
   delay(velox);
@@ -90,10 +90,20 @@ void automate(){
   toggleLED();
   toggleGripper();
   for(int i = p; i < p + 10; i++){
+    sideC = doMath("sideC");
     float alpha = doMath("alpha");
     float beta = doMath("beta");
     float theta = doMath("theta");
-    float sideC = doMath("sideC);
     
-    
-    
+float doMath(char part){
+  switch(part):
+    case "alpha";
+       return x;
+    case "beta"
+       return x;
+    case "theta";
+       return x;
+    case "sideC";
+        return x;
+        
+        
