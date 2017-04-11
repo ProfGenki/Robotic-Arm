@@ -37,6 +37,8 @@ void setup(){
   
   
   initialize();
+  
+  Serial.begin(9600);
 }
 
 //=============== Main Loop ===============\\
@@ -87,7 +89,6 @@ void buttonCheck(){
 }
   
 void automate(){
-  toggleLED();
   toggleGripper();
   for(int i = p; i < p + 10; i++){
     sideC = doMath("sideC");
@@ -95,20 +96,28 @@ void automate(){
     float beta = doMath("beta");
     float theta = doMath("theta");
     
-float doMath(char part){
-//Law of Cosines needed
-float a = 90 - getYaw();
+float doMath(char part, int index){
+    b = getGyroVals;   //angle beta
+    float sideC = sqrt(xList[i]*xList[index] + (250 + abs(yList[index])*yList[index]));
+    theta = atan(xList[index]/(250 + yList[index]));
+    alpha = asin((sideA*sin(gyro))/sideB);
+    gamma = asin((sideC*sin(gyro))/sideB);
+              
+    float alphaNeg = atan(heightG/sideC);
+    alpha -= alphaNeg;
 
-sideC = sqrt(sideA*sideA + sideB*sideB - (2*b*a * Cos(t))
-  switch(part):
     case "alpha";
        return a;
     case "beta"
        return b;
-    case "theta";
+    case "theta";   //Rotational Angle
        return t;
-    case "sideC";
-        return c;}
+    case "sideC";   //length of side C
+        return c;
+    case "alphaNeg";
+        return aNeg;}
+        
+
         
 void initialize(){
   movement(base, 5000, 100, baseInit);
