@@ -1,486 +1,133 @@
 /******************************************************************************
 *                                                                             *
-*                            Loyola Academy Varsity                           *
-*                                 Robotic Arm                                 *
-*                                  Version 3                                  *
+*                            Loyola Academy Science Olympiad                  *
+*                                 Varsity Robotic Arm                         *
+*                                     2016-2017                               *
+*                                     Version 3                               *
 *                                                                             *
 *                              Code by: Trey Starshak                         *
-*                         w/ gyroscope help from: Jarzebski                   *
 *                                                                             *
 *                                                                             *
-*=================================Contents====================================*
-*
-*
-*   Reference Guide
-*
-*   Variables
-*     Libraries
-*     Angles
-*     Buttons
-*     Control
-*     Servo Objects
-*     
-*   Set Up Loop
-*     Pinmode
-*     Initialize
-*     
-*   Main Loop
-*     servoMovements
-*     ButtonCheck
-*     
-*   Functions
-*     Automation
-*       Automate
-*       Flip
-*       SortPos
-*       
-*     Control
-        ButtonCheck
-        Initialize
-        Recall
-        Status
-        
-      Gyro
-        Calibrate
-        ReadRaw
-        ReadNormal
-        SetThreshold
-        Stabilize
-        
-      Servo
-        Move
-        ServoMovement
-        
-***********************************************************************/
-        
-/*===============================================================================================================*
-*                                                                                                                *
-*                                              Variables                                                         *
-*                                                                                                                *
-*================================================================================================================*/
-
-//=======================================Libraries===========================================================\\
-#include <Math.h> 
+*                                                                             *
+******************************************************************************/
 #include <Servo.h>
-#include <Wire.h>
 
-//=========================================Angles=============================================================\\
-float gyro;    
-float theta;
-float alpha;
-float gamma;
-float thetaNeg = 1.0;  //Where theta is perpendicular to the circle.
+//Connections for controller joysticks.
+//Controller still has 5 remaining buttons for posible use 
+int joyRX = 0;  //Right stick, x axis 
+int joyRY = 1;  //Right stick, y axis
+int joyLX = 2;  //Left stick, x axis
+int joyLY = 3;  //Left stick, y axis 
+int joyRB = 4;  //Right stick, button 
 
-float currentAngle; //Current angle of gyroscope. 
+Servo rotateServo;            //Servo moving the yaw of entire arm 
+Servo baseServo;      //Servo moving pitch of entire arm 
+Servo armServo;       //Servo connected to a second joint.  Controls pitch. 
+Servo flipperServo;   //Servo connected to end affector.  Controls pitch
 
-//==========================================Controller===========================================================\\
-const int buttonBlue = 7;
-const int buttonGreen = 6;
-const int buttonRed = 5;
 
-int prevButtonB;
-int prevButtonG;
-int prevButtonR;
+const int degrees = 1;            //Amount of degrees to change servo position by
+const int moveDelay = 5;          //amount of time inbetween motor movements (ms)
+const int upperThreshold = 800:   //allows for some noise in potentiometer without unwanted movement of arm 
+const int lowerThreshold = 400;   //Allows for slight noise in potentiometer without moving 
 
-int statusLED = 4;
+//All values taken by printing out readings when moved to this position 
+float initPosRotate = 89;  
+float initPosBase = 26;
+float initPosArm = 10;
+float initPosFlipper = 63;
 
-int joyRX = 0;
-int joyRY = 1;
-int joyLX = 2;
-int joyLY = 3;
-//=========================================Control============================================================\\
-#define L3G4200D_ADDRESS           (0xD2 >> 1)
-#define L3G4200D_REG_OUT_X_L       (0x28)
-#define L3G4200D_REG_OUT_X_H       (0x29)
-#define L3G4200D_REG_OUT_Y_L       (0x2A)
-#define L3G4200D_REG_OUT_Y_H       (0x2B)
-#define L3G4200D_REG_OUT_Z_L       (0x2C)
-#define L3G4200D_REG_OUT_Z_H       (0x2D)
 
-int p;
-int orientation;
-
-bool useCalibrate;
-
-const int velox = 1;
-const int movementSpeed = 5;
-const int automateSpeed = 1;
-
-const float sideA = 1.0;
-const float sideB = 1.0;
-const float heightG = 1.0;
-
-float xList[] = {1};
-float yList[] = {1};
-
-int actualThreshold = 3;
-int samples = 1000;
-float dpsPerDigit = 0.00875f;
-
-float xRaw;
-float xNormal;
-float xDelta;
-float xSigma;
-float xSum;
-float xThreshold;
-float xThresholdVector;
-
-float yRaw;
-float yNormal;
-float yDelta;
-float ySigma;
-float ySum;
-float yThreshold;
-float yThresholdVector;
-
-float zRaw;
-float zNormal;
-float zDelta;
-float zSigma;
-float zSum;
-float zThreshold;
-float zThresholdVector;
-//======================================Servo Objects========================================================\\
-Servo rotateServo;
-Servo baseServo;
-Servo armServo;
-Servo gripperServo;
-Servo orientationServo;
-Servo sortServo;
-
-float initPosR = 1.0;
-float initPosB = 1.0;
-float initPosA = 1.0;
-float initPosG = 1.0;
-float initPosO = 1.0;
-float initPosS = 1.0;
-
-/*===============================================================================================================*
-*                                                                                                                *
-*                                                Set Up                                                          *
-*                                                                                                                *
-*================================================================================================================*/
-
+/*==========Setup=========*/
 void setup() {
- p = 0;
- pinMode(buttonBlue, INPUT);
- pinMode(buttonGreen, INPUT);
- pinMode(buttonRed, INPUT);
- pinMode(statusLED, OUTPUT);
+ pinMode(joyRB, INPUT);
  
  rotateServo.attach(8);
  baseServo.attach(9);
  armServo.attach(10);
- gripperServo.attach(11);
- orientationServo.attach(12);
- sortServo.attach(13);
+ flipperServo.attach(11);
+
  initialize();
 }
 
-/*===============================================================================================================*
-*                                                                                                                *
-*                                               Main Loop                                                        *
-*                                                                                                                *
-*================================================================================================================*/
-
-
+/*========Main Loop==========*/
 void loop() {
   buttonCheck();
   servoMovement();
 }
 
-/*===============================================================================================================*
-*                                                                                                                *
-*                                               Functions                                                        *
-*                                                                                                                *
-*================================================================================================================*/
-                 
-//============================================Automation=========================================================\\                 
-//=====Automate=====\\ 
-void automate(){
-  sortServo.write(1);
-  delay(automateSpeed);
-  sortServo.write(1);
-  delay(automateSpeed);
-}
-     
-//=====Flip=====\\ 
-void flip(int f){
- if(f == 0){
-   orientationServo.write(180);
-   orientation = 1;}
- else if(f == 1){
-   orientationServo.write(0);
-   orientation = 0;}
- status();
-}
-
-//=====Sort=====\\                  
-void sortPos(){
-  flip(orientation);
-  for(int i = p; i < p + 10; i ++){
-    readNormal();
-    gyro = yNormal;
-    float sideC = sqrt(xList[i]*xList[i] + (250 - yList[i]*yList[i]));
-    theta = atan(xList[i]/(250 + yList[i]));
-    alpha = asin((sideA*sin(gyro))/sideB);
-    gamma = asin((sideC*sin(gyro))/sideB);
-                 
-    float alphaNeg = atan(heightG/sideC);
-    alpha -= alphaNeg;
-   
-    stabilize();       
-    delay(15);             
-    rotateServo.write(theta);
-    delay(15);
-    baseServo.write(alpha);
-    delay(15);
-    armServo.write(gamma);
-    delay(15);
-                 
-    stabilize();
-                 
-    automate();}
-  p += 10;
-  flip(orientation);
-}
-                 
-//=========================================Control Functions=======================================================\\
-                 
-//=====Button Check=====\\                                   
+/*=======Functions===========*/
+/*Checks state of buttons.  Currently only set up for the initialize function */
 void buttonCheck(){
- if(prevButtonB != digitalRead(buttonBlue)){
-   sortPos();
-   prevButtonB = digitalRead(buttonBlue);}
- if(prevButtonG != digitalRead(buttonGreen)){
-   calibrate();
-   prevButtonG = digitalRead(buttonGreen);}
- if(prevButtonR != digitalRead(buttonRed)){
-   recall();
-   prevButtonR = digitalRead(buttonRed);}
+ if(digitalRead(joyRB)){
+   initialize();
+   }
 }
-                 
-//=====Recall=====\\ 
-void recall(){
- status();
- baseServo.write(initPosB);
- delay(100);
- armServo.write(initPosA);
- delay(100);
- rotateServo.write(initPosR);
- delay(100);
- gripperServo.write(initPosG);
- delay(100);
- status();
-}
-                 
-//=====Status=====\\ 
-void status(){
- if(digitalRead(statusLED) == LOW){
-  digitalWrite(statusLED,HIGH);}
- else{
-  digitalWrite(statusLED,LOW);}
-} 
-                 
-//=====Initialize=====\\ 
+
+/* Initializes robot for use.  If arm is ever stuck for any reason, triggering
+ * this function will set it to its self-contained position 
+ * Moves in a different order than manual controls in order to not hit anything 
+ */ 
 void initialize(){
-  
- orientation = 0;
+  baseServo.write(initPosBase);
+  delay(100);
+  armServo.write(initPosArm);
+  delay(100);
+  rotateServo.write(initPosRotate);
+  delay(100);
+  gripperServo.write(initPosFlipper)'
+  delay(100);
+ }
  
- baseServo.write(initPosB);
- delay(100);
- armServo.write(initPosA);
- delay(100);
- rotateServo.write(initPosR);
- delay(100);
- gripperServo.write(initPosG);
- delay(100);
- orientationServo.write(initPosO);
- delay(100);
- sortServo.write(initPosS);
- delay(100);
- 
- prevButtonB = digitalRead(buttonBlue);
- prevButtonG = digitalRead(buttonGreen);
- prevButtonR = digitalRead(buttonRed);
- 
- currentAngle = initPosG;
-  
- xDelta = 0;
- yDelta = 0;
- zDelta = 0;
- useCalibrate = false;
-
-    // Reset threshold values
- xThreshold = 0;
- yThreshold = 0;
- zThreshold = 0;
-  
-  
- calibrate();
- 
- stabilize();
-} 
-                 
-//============================================Gyro Functions======================================================\\
-                 
-//=====Callibrate=====\\                                  
-void calibrate(){
- status();
- {
-    // Set calibrate
-    useCalibrate = true;
-
-    // Reset values
-    float sumX = 0;
-    float sumY = 0;
-    float sumZ = 0;
-    float sigmaX = 0;
-    float sigmaY = 0;
-    float sigmaZ = 0;
-
-    // Read n-samples
-    for (int i = 0; i < samples; ++i){
-  readRaw();
-      
-  xSum += xRaw;
-  ySum += yRaw;
-  zSum += zRaw;
-
-  xSigma += xRaw * xRaw;
-  ySigma += yRaw * yRaw;
-  zSigma += zRaw * zRaw;
-  
-  delay(5);
-    }
-
-    // Calculate delta vectors
-    xDelta = xSum / samples;
-    yDelta = ySum / samples;
-    zDelta = zSum / samples;
-
-    // Calculate threshold vectors
-    xThresholdVector = sqrt((xSigma / samples) - (xDelta * xDelta));
-    yThresholdVector = sqrt((ySigma / samples) - (yDelta * yDelta));
-    zThresholdVector = sqrt((zSigma / samples) - (zDelta * zDelta));
-
-    // If already set threshold, recalculate threshold vectors
-    if (actualThreshold > 0){setThreshold(actualThreshold);}
-}
- status();
-} 
-
-     
-//=====Set Threshold=====\\    
-void setThreshold(byte multiple)
-{
-    if (multiple > 0)
-    {
-  // If not calibrated, need calibrate
-  if (!useCalibrate)
-  {
-      calibrate();
-  }
-  
-  // Calculate threshold vectors
-  xThreshold = xThresholdVector * multiple;
-  yThreshold = yThresholdVector * multiple;
-  zThreshold = zThresholdVector * multiple;
-    } else
-    {
-  // No threshold
-  xThreshold = 0;
-  yThreshold = 0;
-  zThreshold = 0;
-    }
-
-    // Remember old threshold value
-    actualThreshold = multiple;
-}
-     
-     
-//=====ReadNormal=====\\     
-void readNormal()
-{
-    readRaw();
-
-    if (useCalibrate){
-  xNormal = (xRaw - xDelta) * dpsPerDigit;
-  yNormal = (zRaw - yDelta) * dpsPerDigit;
-  zNormal = (yRaw - zDelta) * dpsPerDigit;
-    } 
-  else{
-    xNormal = xRaw * dpsPerDigit;
-    yNormal = yRaw * dpsPerDigit;
-    zNormal = zRaw * dpsPerDigit;
-        }
-
-    if (actualThreshold > 0){
-  if (abs(xNormal) < xThreshold){ xNormal = 0;}
-  if (abs(yNormal) < yThreshold){ yNormal = 0;}
-  if (abs(zNormal) < zThreshold){ zNormal = 0;}
-    }
-}
-                 
-//=====Read Raw=====\\                              
-void readRaw(){
-    Wire.beginTransmission(L3G4200D_ADDRESS);
-    Wire.write(L3G4200D_REG_OUT_X_L | (1 << 7)); 
-    Wire.endTransmission();
-    Wire.requestFrom(L3G4200D_ADDRESS, 6);
-    while (Wire.available() < 6){
-    }
- 
-  byte xla = Wire.read();
-  byte xha = Wire.read();
-  byte yla = Wire.read();
-  byte yha = Wire.read();
-  byte zla = Wire.read();
-  byte zha = Wire.read();
- 
-    xRaw = xha << 8 | xla;
-    yRaw = yha << 8 | yla;
-    zRaw = zha << 8 | zla;
-}
-
-//=====Stabilize=====\\ 
-void stabilize(){
- readNormal();
- gyro = yNormal;
- currentAngle -= gyro;
- gripperServo.write(currentAngle);
-}
-       
-    
-//==========================================Servo Functions========================================================\\
-                 
-//=====Move=====\\                                              
-void move(Servo servoObj, int v, int currentAngle){
- servoObj.write(currentAngle + v);
- stabilize();
- delay(movementSpeed);
-}
-                 
-//=====ServoMovement=====\\                  
+ /* Moves corresponding motor at each section of code 
+  * Checks value of joystick potentiometers to determine
+  * if the motor should move and the direction it should taken
+  * then waits in order to not shake 
+  */
 void servoMovement(){
- int rotateVal = analogRead(joyRX);
- int baseVal = analogRead(joyRY);
- int armVal = analogRead(joyLY);
+  int baseVal = analogRead(joyRY);
+  if(baseVal > upperThreshold) {
+		baseServo.write(baseServo.read() + degrees);
+  }
+  if(baseVal < lowerThreshold) {
+		baseServo.write(baseServo.read() - degrees);
+	}
+  delay(moveDelay);
  
- int currentAngleR = rotateServo.read();
- int currentAngleB = baseServo.read();
- int currentAngleA = armServo.read();
+
  
- if(rotateVal > 800){
-   move(rotateServo, velox, currentAngleR);}
- if(rotateVal < 200){
-   move(rotateServo, -velox, currentAngleR);}
- if(baseVal > 800){
-   move(baseServo, velox, currentAngleB);}
- if(baseVal < 200){
-   move(baseServo, -velox, currentAngleB);}
- if(armVal > 800){
-   move(armServo, velox, currentAngleA);}
- if(armVal < 200){
-   move(armServo, -velox, currentAngleA);}
-}
+  int armVal = analogRead(joyLY);
+  if(armVal > upperThreshold) {
+		armServo.write(armServo.read() + degrees);
+  }
+  if(flipperVal < lowerThreshold) {
+		armServo.write(armServo.read() - degrees);
+	}
+  delay(moveDelay);
+
+ 
+ 
+  int rotateVal = analogRead(joyRX);
+  if(rotateVal > upperThreshold) {
+		rotateServo.write(rotateServo.read() + degrees);
+ }
+  if(rotateVal < lowerThreshold) {
+		rotateServo.write(rotateServo.read() - degrees);
+	}
+  delay(moveDelay);
+
+ 
+ 
+  int flipperVal = analogRead(joyLX);
+  if(flipperVal > upperThreshold) {
+		flipperServoServo.write(flipperServo.read() + degrees);
+ }
+  if(flipperVal < lowerThreshold) {
+		flipperServoServo.write(flipperServo.read() - degrees);
+	}
+  delay(moveDelay);
+ }
+ 
+ 
+ 
+ 
